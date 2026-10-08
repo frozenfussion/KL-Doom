@@ -1,0 +1,4 @@
+.toolchain/
+dist/
+data/*.wad
+*~

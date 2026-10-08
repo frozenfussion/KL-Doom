@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>KL-Doom</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    html, body { margin: 0; height: 100%; background: #111; }
+    body { display: flex; align-items: center; justify-content: center; }
+    /* the canvas must not have a border or padding, or mouse coordinates are wrong */
+    canvas { background: #000; width: 800px; height: 600px; max-width: 100vw; }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+  <script>
+    // Level 1 is warped to directly (E1M1 slot of the shareware IWAD).
+    var args = ["-iwad", "doom1.wad", "-window", "-nogui", "-nomusic", "-config", "default.cfg", "-warp", "1", "1", "-skill", "3"];
+
+    var Module = {
+      noInitialRun: true,
+      onRuntimeInitialized: function () { callMain(args); },
+      preRun: function () {
+        Module.FS.createPreloadedFile("", "doom1.wad", "doom1.wad", true, true);
+        Module.FS.createPreloadedFile("", "default.cfg", "default.cfg", true, true);
+      },
+      canvas: document.getElementById("canvas"),
+      print: function (t) { console.log(t); },
+      printErr: function (t) { console.error(t); }
+    };
+  </script>
+  <script src="websockets-doom.js"></script>
+</body>
+</html>
