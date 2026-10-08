@@ -24,6 +24,7 @@ from shapely.ops import nearest_points, polygonize
 from shapely.strtree import STRtree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import faces            # noqa: E402
 import graphics         # noqa: E402
 import layout as L      # noqa: E402
 import osm as O         # noqa: E402
@@ -415,7 +416,7 @@ def menu_graphics(iwad_path):
     grid, _ = graphics.make_kl_doom(wad)
     logo = graphics.encode_patch(grid, left=26, top=0)       # the menu draws it at x=94; left=26 centres it
     title = graphics.encode_patch(graphics.build_titlepic(wad, wad.image(grid)))
-    return [("M_DOOM", logo), ("TITLEPIC", title), ("KLSTORY", story.intro_lump())]
+    return [("M_DOOM", logo), ("TITLEPIC", title), ("KLSTORY", story.intro_lump())] + faces.face_lumps(wad)
 
 
 def preview(result, path):

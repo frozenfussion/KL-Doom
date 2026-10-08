@@ -86,7 +86,7 @@ Key numbers (from `generator/layout.py`, `generator/make_level.py` and the commi
 | Ceiling | every sector's ceiling is at 8192 (sky); tallest building floor 7000 |
 | Level size | 432 sectors, 8,040 linedefs, 9,701 vertices, 8,911 BSP nodes |
 | Things | 297 in total, including 70 monsters and 140 street lamps |
-| Files | `kl1.wad` 1.27 MB; `websockets-doom.wasm` 7.7 MB (about 2.7 MB compressed with zstd) |
+| Files | `kl1.wad` 1.31 MB; `websockets-doom.wasm` 7.7 MB (about 2.7 MB compressed with zstd) |
 
 ## Build and run locally
 
@@ -155,6 +155,7 @@ generator/   OSM -> Doom level
   make_level.py  build the level, place monsters and items, write kl1.wad
   story.py     intro and ending text
   graphics.py  menu logo and title screen (drawn with the game's own palette)
+  faces.py     status-bar face (id's Doom faces, recoloured)
   wadio.py     minimal WAD reader/writer
   assets/      skyline.png, used on the title screen: a crop of a screenshot of this game's
                own Level 1 render, so it is original to this project
