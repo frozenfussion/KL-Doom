@@ -5,21 +5,56 @@
   <title>KL-Doom</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    html, body { margin: 0; height: 100%; background: #111; }
-    body { display: flex; align-items: center; justify-content: center; }
-    /* the canvas must not have a border or padding, or mouse coordinates are wrong */
-    canvas { background: #000; width: 800px; height: 600px; max-width: 100vw; }
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+    #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #000; }
+    /* Fill the window at Doom's 4:3 shape. The game sets its own inline size, hence !important.
+       The canvas must not have a border or padding, or mouse coordinates are wrong. */
+    canvas {
+      display: block; outline: none; aspect-ratio: 4 / 3; image-rendering: pixelated;
+      width: min(100vw, calc(100vh * 4 / 3)) !important;
+      width: min(100vw, calc(100dvh * 4 / 3)) !important;
+      height: auto !important;
+    }
+    #fs {
+      position: absolute; top: 10px; right: 10px; z-index: 2;
+      font: 600 13px/1 system-ui, sans-serif; letter-spacing: .03em; color: #e8b53a;
+      background: rgba(0, 0, 0, .55); border: 1px solid #5a4a22; border-radius: 4px; padding: 8px 12px; cursor: pointer;
+    }
+    #fs:hover, #fs:focus-visible { background: rgba(40, 30, 10, .85); outline: none; }
+    #loading { position: absolute; color: #e8b53a; font: 600 14px system-ui, sans-serif; letter-spacing: .2em; }
   </style>
 </head>
 <body>
-  <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+  <div id="stage">
+    <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+    <div id="loading">LOADING</div>
+    <button id="fs" type="button">Fullscreen (F)</button>
+  </div>
   <script>
-    // Level 1 (kl1.wad) replaces E1M1 of the shareware IWAD; warp straight into it.
-    var args = ["-iwad", "doom1.wad", "-window", "-nogui", "-nomusic", "-config", "default.cfg", "-file", "kl1.wad", "-dehlump", "-warp", "1", "1", "-skill", "3"];
+    // The game opens on its title screen. kl1.wad replaces E1M1 of the shareware IWAD with Level 1.
+    var args = ["-iwad", "doom1.wad", "-window", "-nogui", "-nomusic", "-config", "default.cfg", "-file", "kl1.wad", "-dehlump"];
+
+    var stage = document.getElementById("stage");
+    var fsButton = document.getElementById("fs");
+
+    function toggleFullscreen() {
+      if (document.fullscreenElement) { document.exitFullscreen(); }
+      else if (stage.requestFullscreen) { stage.requestFullscreen().catch(function () {}); }
+    }
+    fsButton.addEventListener("click", function () { toggleFullscreen(); fsButton.blur(); });
+    document.addEventListener("fullscreenchange", function () {
+      fsButton.textContent = document.fullscreenElement ? "Exit fullscreen (F)" : "Fullscreen (F)";
+    });
+    window.addEventListener("keydown", function (e) {
+      if ((e.key === "f" || e.key === "F") && !e.ctrlKey && !e.metaKey && !e.altKey) { toggleFullscreen(); }
+    });
 
     var Module = {
       noInitialRun: true,
-      onRuntimeInitialized: function () { callMain(args); },
+      onRuntimeInitialized: function () {
+        document.getElementById("loading").hidden = true;
+        callMain(args);
+      },
       preRun: function () {
         Module.FS.createPreloadedFile("", "doom1.wad", "doom1.wad", true, true);
         Module.FS.createPreloadedFile("", "kl1.wad", "kl1.wad", true, true);

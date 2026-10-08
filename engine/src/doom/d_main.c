@@ -500,17 +500,16 @@ void D_DoAdvanceDemo(void)
     // However! There is an alternate version of Final Doom that
     // includes a fixed executable.
 
-    if (gameversion == exe_ultimate || gameversion == exe_final)
-        demosequence = (demosequence + 1) % 7;
-    else
-        demosequence = (demosequence + 1) % 6;
+    // KL-Doom: no attract-mode demos or shareware order screens. The title
+    // screen simply stays up until a key is pressed.
+    demosequence = 0;
 
     switch (demosequence) {
     case 0:
         if (gamemode == commercial)
             pagetic = TICRATE * 11;
         else
-            pagetic = 170;
+            pagetic = TICRATE * 600;
         gamestate = GS_DEMOSCREEN;
         pagename = DEH_String("TITLEPIC");
         if (gamemode == commercial)

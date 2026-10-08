@@ -23,6 +23,7 @@
 
 #include "doomtype.h"
 #include "d_event.h"
+#include "doomdef.h"
 //
 // FINALE
 //
@@ -38,6 +39,9 @@ void F_Drawer (void);
 
 
 void F_StartFinale (void);
+
+// KL-Doom: the story shown before the first level (from the KLSTORY lump).
+void F_StartIntro (skill_t skill, int episode, int map);
 
 
 

@@ -22,6 +22,7 @@
 #include <ctype.h>
 
 
+#include <emscripten.h>
 #include "doomdef.h"
 #include "doomkeys.h"
 #include "dstrings.h"
@@ -44,6 +45,7 @@
 
 #include "hu_stuff.h"
 
+#include "f_finale.h"
 #include "g_game.h"
 
 #include "m_argv.h"
@@ -227,13 +229,12 @@ static void M_ClearMenus (void);
 //
 // DOOM MENU
 //
+// KL-Doom: no Load Game, Save Game or Read This (the latter only shows the
+// shareware order pages).
 enum
 {
     newgame = 0,
     options,
-    loadgame,
-    savegame,
-    readthis,
     quitdoom,
     main_end
 } main_e;
@@ -242,10 +243,6 @@ menuitem_t MainMenu[]=
 {
     {1,"M_NGAME",M_NewGame,'n'},
     {1,"M_OPTION",M_Options,'o'},
-    {1,"M_LOADG",M_LoadGame,'l'},
-    {1,"M_SAVEG",M_SaveGame,'s'},
-    // Another hickup with Special edition.
-    {1,"M_RDTHIS",M_ReadThis,'r'},
     {1,"M_QUITG",M_QuitDOOM,'q'}
 };
 
@@ -255,7 +252,7 @@ menu_t  MainDef =
     NULL,
     MainMenu,
     M_DrawMainMenu,
-    97,64,
+    97,72,
     0
 };
 
@@ -878,6 +875,15 @@ void M_MusicVol(int choice)
 //
 void M_DrawMainMenu(void)
 {
+    // KL-Doom: on the title screen the picture already carries the big logo,
+    // so skip the small menu logo and put the items below it.
+    if (gamestate == GS_DEMOSCREEN)
+    {
+        MainDef.y = 108;
+        return;
+    }
+
+    MainDef.y = 72;
     V_DrawPatchDirect(94, 2,
                       W_CacheLumpName(DEH_String("M_DOOM"), PU_CACHE));
 }
@@ -894,6 +900,8 @@ void M_DrawNewGame(void)
     V_DrawPatchDirect(54, 38, W_CacheLumpName(DEH_String("M_SKILL"), PU_CACHE));
 }
 
+extern int epi;
+
 void M_NewGame(int choice)
 {
     if (netgame && !demoplayback)
@@ -901,13 +909,11 @@ void M_NewGame(int choice)
 	M_StartMessage(DEH_String(NEWGAME),NULL,false);
 	return;
     }
-	
-    // Chex Quest disabled the episode select screen, as did Doom II.
 
-    if (gamemode == commercial || gameversion == exe_chex)
-	M_SetupNextMenu(&NewDef);
-    else
-	M_SetupNextMenu(&EpiDef);
+    // KL-Doom has a single episode: skip the episode menu and go to the skill menu.
+    epi = 0;
+    NewDef.prevMenu = &MainDef;
+    M_SetupNextMenu(&NewDef);
 }
 
 
@@ -926,7 +932,7 @@ void M_VerifyNightmare(int key)
     if (key != key_menu_confirm)
 	return;
 		
-    G_DeferedInitNew(nightmare,epi+1,1);
+    F_StartIntro(nightmare,epi+1,1);
     M_ClearMenus ();
 }
 
@@ -938,7 +944,7 @@ void M_ChooseSkill(int choice)
 	return;
     }
 	
-    G_DeferedInitNew(choice,epi+1,1);
+    F_StartIntro(choice,epi+1,1);
     M_ClearMenus ();
 }
 
@@ -1100,15 +1106,9 @@ void M_QuitResponse(int key)
 {
     if (key != key_menu_confirm)
 	return;
-    if (!netgame)
-    {
-	if (gamemode == commercial)
-	    S_StartSound(NULL,quitsounds2[(gametic>>2)&7]);
-	else
-	    S_StartSound(NULL,quitsounds[(gametic>>2)&7]);
-	I_WaitVBL(105);
-    }
-    I_Quit ();
+    // KL-Doom: leaving the game opens the author's website.
+    S_StartSound(NULL,quitsounds[(gametic>>2)&7]);
+    emscripten_run_script("window.location.href = 'https://faysalaziz.com'");
 }
 
 
@@ -1135,8 +1135,10 @@ static const char *M_SelectEndMessage(void)
 
 void M_QuitDOOM(int choice)
 {
-    DEH_snprintf(endstring, sizeof(endstring), "%s\n\n" DOSY,
-                 DEH_String(M_SelectEndMessage()));
+    (void) M_SelectEndMessage;
+    M_StringCopy(endstring, "ARE YOU SURE YOU WANT TO LEAVE KL-DOOM?\n\n"
+                            "(PRESS Y TO GO TO FAYSALAZIZ.COM,\nN TO STAY)",
+                 sizeof(endstring));
 
     M_StartMessage(endstring,M_QuitResponse,true);
 }
@@ -1659,29 +1661,17 @@ boolean M_Responder (event_t* ev)
 	}
         else if (key == key_menu_help)     // Help key
         {
-	    M_StartControlPanel ();
-
-	    if (gameversion >= exe_ultimate)
-	      currentMenu = &ReadDef2;
-	    else
-	      currentMenu = &ReadDef1;
-
-	    itemOn = 0;
-	    S_StartSound(NULL,sfx_swtchn);
-	    return true;
-	}
+	// KL-Doom: disabled
+	return true;
+        }
         else if (key == key_menu_save)     // Save
         {
-	    M_StartControlPanel();
-	    S_StartSound(NULL,sfx_swtchn);
-	    M_SaveGame(0);
+	    // KL-Doom: disabled
 	    return true;
         }
         else if (key == key_menu_load)     // Load
         {
-	    M_StartControlPanel();
-	    S_StartSound(NULL,sfx_swtchn);
-	    M_LoadGame(0);
+	    // KL-Doom: disabled
 	    return true;
         }
         else if (key == key_menu_volume)   // Sound Volume
@@ -1700,8 +1690,7 @@ boolean M_Responder (event_t* ev)
         }
         else if (key == key_menu_qsave)    // Quicksave
         {
-	    S_StartSound(NULL,sfx_swtchn);
-	    M_QuickSave();
+	    // KL-Doom: disabled
 	    return true;
         }
         else if (key == key_menu_endgame)  // End game
@@ -1718,8 +1707,7 @@ boolean M_Responder (event_t* ev)
         }
         else if (key == key_menu_qload)    // Quickload
         {
-	    S_StartSound(NULL,sfx_swtchn);
-	    M_QuickLoad();
+	    // KL-Doom: disabled
 	    return true;
         }
         else if (key == key_menu_quit)     // Quit DOOM
@@ -2080,7 +2068,6 @@ void M_Init (void)
 
     if (gameversion >= exe_ultimate)
     {
-        MainMenu[readthis].routine = M_ReadThis2;
         ReadDef2.prevMenu = NULL;
     }
 
@@ -2091,9 +2078,6 @@ void M_Init (void)
 
     if (gamemode == commercial)
     {
-        MainMenu[readthis] = MainMenu[quitdoom];
-        MainDef.numitems--;
-        MainDef.y += 8;
         NewDef.prevMenu = &MainDef;
         ReadDef1.routine = M_DrawReadThisCommercial;
         ReadDef1.x = 330;

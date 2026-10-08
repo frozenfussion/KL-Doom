@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <string.h>
 
 // Functions.
 #include "deh_main.h"
@@ -28,6 +29,7 @@
 #include "z_zone.h"
 #include "v_video.h"
 #include "w_wad.h"
+#include "g_game.h"
 #include "s_sound.h"
 
 // Data.
@@ -158,8 +160,130 @@ void F_StartFinale (void)
 
 
 
+//
+// KL-Doom intro story
+//
+// The story lives in the KLSTORY lump of kl1.wad: plain text, pages separated
+// by a line containing only "---". It is shown with the same typewriter text
+// screen as the ending, before the first level. Any key shows the rest of a
+// page, then moves to the next one; after the last page the level starts.
+//
+#define KL_MAX_PAGES 8
+
+static char *intro_text = NULL;
+static const char *intro_pages[KL_MAX_PAGES];
+static int intro_numpages;
+static int intro_page;
+static boolean intro_active = false;
+static skill_t intro_skill;
+static int intro_episode;
+static int intro_map;
+
+void F_StartIntro (skill_t skill, int episode, int map)
+{
+    int lump = W_CheckNumForName("KLSTORY");
+    int len;
+    char *p;
+    char *sep;
+
+    if (lump < 0)
+    {
+	G_DeferedInitNew(skill, episode, map);
+	return;
+    }
+
+    len = W_LumpLength(lump);
+    free(intro_text);
+    intro_text = malloc(len + 1);
+    W_ReadLump(lump, intro_text);
+    intro_text[len] = '\0';
+
+    intro_numpages = 0;
+    p = intro_text;
+    while (intro_numpages < KL_MAX_PAGES)
+    {
+	intro_pages[intro_numpages++] = p;
+	sep = strstr(p, "\n---\n");
+	if (sep == NULL)
+	    break;
+	*sep = '\0';
+	p = sep + 5;
+    }
+
+    intro_skill = skill;
+    intro_episode = episode;
+    intro_map = map;
+    intro_page = 0;
+    intro_active = true;
+
+    gameaction = ga_nothing;
+    gamestate = GS_FINALE;
+    viewactive = false;
+    automapactive = false;
+    finalestage = F_STAGE_TEXT;
+    finalecount = 0;
+    finaletext = intro_pages[0];
+    finaleflat = DEH_String("FLOOR4_8");
+}
+
+static boolean F_IntroPageDone (void)
+{
+    return finalecount > strlen(finaletext) * TEXTSPEED + 10;
+}
+
+static void F_IntroAdvance (void)
+{
+    if (!F_IntroPageDone())
+    {
+	// first key press: show the whole page at once
+	finalecount = strlen(finaletext) * TEXTSPEED + 11;
+	return;
+    }
+
+    intro_page++;
+    if (intro_page >= intro_numpages)
+    {
+	intro_active = false;
+	G_DeferedInitNew(intro_skill, intro_episode, intro_map);
+	return;
+    }
+
+    finaletext = intro_pages[intro_page];
+    finalecount = 0;
+}
+
+
+// KL-Doom: the ending text screen (shown after the last map).
+static boolean F_IsKLEnding (void)
+{
+    return !intro_active && finalestage == F_STAGE_TEXT
+        && gameepisode == 1 && gamemap == KL_LAST_MAP;
+}
+
 boolean F_Responder (event_t *event)
 {
+    if (F_IsKLEnding()
+     && (event->type == ev_keydown || (event->type == ev_mouse && event->data1 != 0)))
+    {
+	// first key press shows the whole text, the next one returns to the title screen
+	if (finalecount <= strlen(finaletext) * TEXTSPEED + 10)
+	    finalecount = strlen(finaletext) * TEXTSPEED + 11;
+	else
+	    D_StartTitle();
+	return true;
+    }
+
+    if (intro_active)
+    {
+	if (event->type == ev_keydown
+	 || (event->type == ev_mouse && event->data1 != 0))
+	{
+	    F_IntroAdvance();
+	    return true;
+	}
+	return false;
+    }
+
     if (finalestage == F_STAGE_CAST)
 	return F_CastResponder (event);
 	
@@ -173,6 +297,12 @@ boolean F_Responder (event_t *event)
 void F_Ticker (void)
 {
     size_t		i;
+
+    if (intro_active)
+    {
+	finalecount++;
+	return;
+    }
     
     // check for skipping
     if ( (gamemode == commercial)
@@ -708,6 +838,24 @@ static void F_ArtScreenDrawer(void)
 //
 // F_Drawer
 //
+static void F_DrawHint (const char *text)
+{
+    int cx = 10, cy = 188, c, w;
+
+    for ( ; *text; text++)
+    {
+	c = toupper(*text) - HU_FONTSTART;
+	if (c < 0 || c > HU_FONTSIZE)
+	{
+	    cx += 4;
+	    continue;
+	}
+	w = SHORT (hu_font[c]->width);
+	V_DrawPatch(cx, cy, hu_font[c]);
+	cx += w;
+    }
+}
+
 void F_Drawer (void)
 {
     switch (finalestage)
@@ -717,6 +865,8 @@ void F_Drawer (void)
             break;
         case F_STAGE_TEXT:
             F_TextWrite();
+            if ((intro_active || F_IsKLEnding()) && F_IntroPageDone())
+                F_DrawHint("PRESS ANY KEY");
             break;
         case F_STAGE_ARTSCREEN:
             F_ArtScreenDrawer();

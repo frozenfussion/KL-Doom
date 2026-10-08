@@ -24,8 +24,10 @@ from shapely.ops import nearest_points, polygonize
 from shapely.strtree import STRtree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import layout as L          # noqa: E402
-import osm as O             # noqa: E402
+import graphics         # noqa: E402
+import layout as L      # noqa: E402
+import osm as O         # noqa: E402
+import story            # noqa: E402
 from wadio import IwadResources, read_wad, write_wad   # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -387,23 +389,12 @@ ORIGINAL_E1TEXT = (
     "The Shores of Hell and its amazing\n"
     "sequel, Inferno!\n"
 )
-ENDING_TEXT = (
-    "You fought your way through KLCC,\n"
-    "across the park and the plaza, all\n"
-    "the way to the Petronas Twin Towers.\n"
-    "\n"
-    "Kuala Lumpur is a big city, and the\n"
-    "night is young. More levels are\n"
-    "on the way!\n"
-    "\n"
-    "Thanks for playing KL-Doom.\n"
-)
 
 
 def dehacked():
     """Rename the level (automap, HUD) and replace the ending text."""
     text = "Patch File for DeHackEd v3.0\nDoom version = 19\nPatch format = 6\n"
-    for old, new in ((ORIGINAL_TITLE, MAP_TITLE), (ORIGINAL_E1TEXT, ENDING_TEXT)):
+    for old, new in ((ORIGINAL_TITLE, MAP_TITLE), (ORIGINAL_E1TEXT, story.ending_text())):
         text += "\nText %d %d\n%s%s\n" % (len(old), len(new), old, new)
     return text.encode("latin1")
 
@@ -414,6 +405,17 @@ def build_nodes(raw_wad, out_wad):
         raise SystemExit("zdbsp not found - install it with: sudo apt install zdbsp")
     subprocess.run([tool, "--no-timing", "--zero-reject", "--empty-blockmap", "-o", out_wad, raw_wad],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def menu_graphics(iwad_path):
+    """Lumps that replace or add to the IWAD's: menu logo, title screen and the intro story."""
+    wad = graphics.Wad(iwad_path)
+    fonts = {chr(c): wad.patch("STCFN%03d" % c)[0] for c in range(33, 96) if "STCFN%03d" % c in wad.ents}
+    story.check(fonts)
+    grid, _ = graphics.make_kl_doom(wad)
+    logo = graphics.encode_patch(grid, left=26, top=0)       # the menu draws it at x=94; left=26 centres it
+    title = graphics.encode_patch(graphics.build_titlepic(wad, wad.image(grid)))
+    return [("M_DOOM", logo), ("TITLEPIC", title), ("KLSTORY", story.intro_lump())]
 
 
 def preview(result, path):
@@ -480,6 +482,7 @@ def main():
         build_nodes(raw, built)
         _, out = read_wad(built)
     out.append(("DEHACKED", dehacked()))
+    out += menu_graphics(args.iwad)
     write_wad(args.out, out)
 
     counts = {n: len(b) for n, b in out}
