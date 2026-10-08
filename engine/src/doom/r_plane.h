@@ -58,6 +58,7 @@ R_MakeSpans
   int		b2 );
 
 void R_DrawPlanes (void);
+void R_DrawSkyBackground (void);
 
 visplane_t*
 R_FindPlane

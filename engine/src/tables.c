@@ -30,6 +30,8 @@
 //	
 //    
 
+#include <stdint.h>
+
 #include "tables.h"
 
 // to get a global angle from cartesian coordinates, the coordinates are
@@ -48,7 +50,10 @@ int SlopeDiv(unsigned int num, unsigned int den)
     }
     else
     {
-        ans = (num << 3) / (den >> 8);
+        // KL-Doom: 64-bit intermediate. The original 32-bit shift overflows
+        // for coordinate differences over 8192 map units, which broke the
+        // angle calculation (and so rendering) for distant walls in big maps.
+        ans = (unsigned) (((uint64_t) num << 3) / (den >> 8));
 
         if (ans <= SLOPERANGE)
         {

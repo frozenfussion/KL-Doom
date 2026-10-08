@@ -868,6 +868,7 @@ void R_RenderPlayerView (player_t* player)
     R_ClearClipSegs ();
     R_ClearDrawSegs ();
     R_ClearPlanes ();
+    R_DrawSkyBackground ();
     R_ClearSprites ();
     
     // check for new console commands.

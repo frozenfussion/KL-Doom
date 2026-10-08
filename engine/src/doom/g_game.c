@@ -1129,7 +1129,7 @@ void G_ScreenShot(void) { gameaction = ga_screenshot; }
 
 // DOOM Par Times
 static const int pars[4][10] = {{0},
-                                {0, 30, 75, 120, 90, 165, 180, 180, 30, 165},
+                                {0, 300, 75, 120, 90, 165, 180, 180, 30, 165},   // KL-Doom: 5:00 par for E1M1
                                 {0, 90, 90, 90, 120, 90, 360, 240, 30, 170},
                                 {0, 90, 45, 90, 150, 90, 90, 165, 30, 135}};
 
@@ -1338,6 +1338,9 @@ void G_WorldDone(void)
             F_StartFinale();
             break;
         }
+    }
+    else if (gameepisode == 1 && gamemap == KL_LAST_MAP) {
+        F_StartFinale();
     }
 }
 

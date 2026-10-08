@@ -19,6 +19,7 @@
 
 
 
+#include <limits.h>
 #include <math.h>
 #include <stdlib.h>
 
@@ -82,9 +83,9 @@ static int      totallines;
 // Blockmap size.
 int		bmapwidth;
 int		bmapheight;	// size in mapblocks
-short*		blockmap;	// int for larger maps
+int*		blockmap;	// int for larger maps
 // offsets in blockmap are from here
-short*		blockmaplump;		
+int*		blockmaplump;		
 // origin of block map
 fixed_t		bmaporgx;
 fixed_t		bmaporgy;
@@ -521,38 +522,135 @@ void P_LoadSideDefs (int lump)
 
 
 //
-// P_LoadBlockMap
+// P_CreateBlockMap
 //
-void P_LoadBlockMap (int lump)
+// KL-Doom: the blockmap is built at load time, with 32-bit offsets, instead of
+// being read from the BLOCKMAP lump. The lump format (16-bit offsets) limits a
+// map to roughly 100 x 100 blocks, far too small for a real-world city map.
+// Must run after the vertexes and linedefs are loaded.
+//
+static void BlockMapLine(int lineno, int ox, int oy, int pass,
+                         int *counts, int *base, int *fill)
+{
+    line_t *ld = &lines[lineno];
+    int x1 = ld->v1->x >> FRACBITS, y1 = ld->v1->y >> FRACBITS;
+    int x2 = ld->v2->x >> FRACBITS, y2 = ld->v2->y >> FRACBITS;
+    int bx, by, bx1, bx2, by1, by2, t;
+
+    if (x1 > x2)
+    {
+        t = x1; x1 = x2; x2 = t;
+        t = y1; y1 = y2; y2 = t;
+    }
+
+    bx1 = (x1 - ox) >> 7;
+    bx2 = (x2 - ox) >> 7;
+
+    for (bx = bx1; bx <= bx2; bx++)
+    {
+        double xl = x1 > ox + bx * 128 ? x1 : ox + bx * 128;
+        double xr = x2 < ox + (bx + 1) * 128 ? x2 : ox + (bx + 1) * 128;
+        double yl, yr, ylo, yhi;
+
+        if (x2 == x1)
+        {
+            yl = y1;
+            yr = y2;
+        }
+        else
+        {
+            yl = y1 + (xl - x1) / (double)(x2 - x1) * (y2 - y1);
+            yr = y1 + (xr - x1) / (double)(x2 - x1) * (y2 - y1);
+        }
+
+        ylo = yl < yr ? yl : yr;
+        yhi = yl < yr ? yr : yl;
+        by1 = (int)floor((ylo - oy) / 128.0);
+        by2 = (int)floor((yhi - oy) / 128.0);
+
+        if (by1 < 0) by1 = 0;
+        if (by2 >= bmapheight) by2 = bmapheight - 1;
+
+        for (by = by1; by <= by2; by++)
+        {
+            int idx = by * bmapwidth + bx;
+
+            if (pass == 0)
+                counts[idx]++;
+            else
+                blockmaplump[base[idx] + fill[idx]++] = lineno;
+        }
+    }
+}
+
+void P_CreateBlockMap (void)
 {
     int i;
     int count;
-    int lumplen;
+    int nblocks;
+    int pos;
+    int minx = INT_MAX, miny = INT_MAX, maxx = INT_MIN, maxy = INT_MIN;
+    int ox, oy;
+    int *counts, *base, *fill;
 
-    lumplen = W_LumpLength(lump);
-    count = lumplen / 2;
-	
-    blockmaplump = Z_Malloc(lumplen, PU_LEVEL, NULL);
-    W_ReadLump(lump, blockmaplump);
+    for (i = 0; i < numvertexes; i++)
+    {
+        int vx = vertexes[i].x >> FRACBITS;
+        int vy = vertexes[i].y >> FRACBITS;
+
+        if (vx < minx) minx = vx;
+        if (vx > maxx) maxx = vx;
+        if (vy < miny) miny = vy;
+        if (vy > maxy) maxy = vy;
+    }
+
+    ox = minx - 8;
+    oy = miny - 8;
+    bmaporgx = ox << FRACBITS;
+    bmaporgy = oy << FRACBITS;
+    bmapwidth = ((maxx - ox) >> 7) + 1;
+    bmapheight = ((maxy - oy) >> 7) + 1;
+    nblocks = bmapwidth * bmapheight;
+
+    counts = calloc(nblocks, sizeof(int));
+    base = calloc(nblocks, sizeof(int));
+    fill = calloc(nblocks, sizeof(int));
+
+    for (i = 0; i < numlines; i++)
+        BlockMapLine(i, ox, oy, 0, counts, base, fill);
+
+    // layout: 4 header ints, one offset per block, then one list per block
+    // (line numbers, terminated by -1)
+    pos = 4 + nblocks;
+    for (i = 0; i < nblocks; i++)
+    {
+        base[i] = pos;
+        pos += counts[i] + 1;
+    }
+
+    blockmaplump = Z_Malloc(pos * sizeof(int), PU_LEVEL, NULL);
+    blockmaplump[0] = ox;
+    blockmaplump[1] = oy;
+    blockmaplump[2] = bmapwidth;
+    blockmaplump[3] = bmapheight;
     blockmap = blockmaplump + 4;
 
-    // Swap all short integers to native byte ordering.
-  
-    for (i=0; i<count; i++)
+    for (i = 0; i < nblocks; i++)
     {
-	blockmaplump[i] = SHORT(blockmaplump[i]);
+        blockmap[i] = base[i];
+        blockmaplump[base[i] + counts[i]] = -1;
     }
-		
-    // Read the header
 
-    bmaporgx = blockmaplump[0]<<FRACBITS;
-    bmaporgy = blockmaplump[1]<<FRACBITS;
-    bmapwidth = blockmaplump[2];
-    bmapheight = blockmaplump[3];
-	
+    for (i = 0; i < numlines; i++)
+        BlockMapLine(i, ox, oy, 1, counts, base, fill);
+
+    free(counts);
+    free(base);
+    free(fill);
+
     // Clear out mobj chains
 
-    count = sizeof(*blocklinks) * bmapwidth * bmapheight;
+    count = sizeof(*blocklinks) * nblocks;
     blocklinks = Z_Malloc(count, PU_LEVEL, 0);
     memset(blocklinks, 0, count);
 }
@@ -825,12 +923,12 @@ P_SetupLevel
     leveltime = 0;
 	
     // note: most of this ordering is important	
-    P_LoadBlockMap (lumpnum+ML_BLOCKMAP);
     P_LoadVertexes (lumpnum+ML_VERTEXES);
     P_LoadSectors (lumpnum+ML_SECTORS);
     P_LoadSideDefs (lumpnum+ML_SIDEDEFS);
 
     P_LoadLineDefs (lumpnum+ML_LINEDEFS);
+    P_CreateBlockMap ();
     P_LoadSubsectors (lumpnum+ML_SSECTORS);
     P_LoadNodes (lumpnum+ML_NODES);
     P_LoadSegs (lumpnum+ML_SEGS);

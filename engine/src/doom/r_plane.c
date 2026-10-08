@@ -42,14 +42,14 @@ planefunction_t		ceilingfunc;
 //
 
 // Here comes the obnoxious "visplane".
-#define MAXVISPLANES	128
+#define MAXVISPLANES	1024
 visplane_t		visplanes[MAXVISPLANES];
 visplane_t*		lastvisplane;
 visplane_t*		floorplane;
 visplane_t*		ceilingplane;
 
 // ?
-#define MAXOPENINGS	SCREENWIDTH*64
+#define MAXOPENINGS	SCREENWIDTH*256
 short			openings[MAXOPENINGS];
 short*			lastopening;
 
@@ -354,6 +354,36 @@ R_MakeSpans
     }
 }
 
+
+
+//
+// R_DrawSkyBackground
+//
+// KL-Doom: fill the whole 3D view with the sky before anything else is drawn.
+// Sky is normally only painted where a ceiling edge is on screen, which breaks
+// down with the very tall ceilings used for skyscrapers: pixels above a short
+// building would never be marked and show up empty. Walls, floors and sprites
+// draw over this, so only the genuinely open sky remains visible.
+//
+void R_DrawSkyBackground (void)
+{
+    int x;
+    int angle;
+
+    dc_iscale = pspriteiscale>>detailshift;
+    dc_colormap = colormaps;
+    dc_texturemid = skytexturemid;
+
+    for (x = 0; x < viewwidth; x++)
+    {
+	dc_yl = 0;
+	dc_yh = viewheight - 1;
+	angle = (viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+	dc_x = x;
+	dc_source = R_GetColumn(skytexture, angle);
+	colfunc ();
+    }
+}
 
 
 //

@@ -68,7 +68,7 @@ typedef struct
 
 static textscreen_t textscreens[] =
 {
-    { doom,      1, 8,  "FLOOR4_8",  E1TEXT},
+    { doom,      1, KL_LAST_MAP,  "FLOOR4_8",  E1TEXT},
     { doom,      2, 8,  "SFLR6_1",   E2TEXT},
     { doom,      3, 8,  "MFLR8_4",   E3TEXT},
     { doom,      4, 8,  "MFLR8_3",   E4TEXT},
@@ -207,6 +207,14 @@ void F_Ticker (void)
     if (finalestage == F_STAGE_TEXT
      && finalecount>strlen (finaletext)*TEXTSPEED + TEXTWAIT)
     {
+	// KL-Doom: after the ending text go back to the title screen, rather
+	// than the shareware order screen.
+	if (gameepisode == 1 && gamemap == KL_LAST_MAP)
+	{
+	    D_StartTitle ();
+	    return;
+	}
+
 	finalecount = 0;
 	finalestage = F_STAGE_ARTSCREEN;
 	wipegamestate = -1;		// force a wipe

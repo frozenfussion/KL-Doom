@@ -1,4 +1,6 @@
 .toolchain/
 dist/
 data/*.wad
+!data/kl1.wad
 *~
+__pycache__/

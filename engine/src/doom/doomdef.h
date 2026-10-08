@@ -44,6 +44,10 @@
 // The maximum number of players, multiplayer/networking.
 #define MAXPLAYERS 4
 
+// KL-Doom: the last map of the game. After it the intermission ends and the
+// ending text is shown, instead of continuing into the original E1M2.
+#define KL_LAST_MAP 1
+
 // The current state of the game: whether we are
 // playing, gazing at the intermission screen,
 // the game final animation, or a demo. 

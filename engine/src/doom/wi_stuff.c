@@ -1428,7 +1428,8 @@ void WI_updateStats(void)
 	{
 	    S_StartSound(0, sfx_sgcock);
 
-	    if (gamemode == commercial)
+	    if (gamemode == commercial
+	     || (wbs->epsd == 0 && wbs->last == KL_LAST_MAP - 1))
 		WI_initNoState();
 	    else
 		WI_initShowNextLoc();

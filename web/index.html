@@ -14,14 +14,15 @@
 <body>
   <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
   <script>
-    // Level 1 is warped to directly (E1M1 slot of the shareware IWAD).
-    var args = ["-iwad", "doom1.wad", "-window", "-nogui", "-nomusic", "-config", "default.cfg", "-warp", "1", "1", "-skill", "3"];
+    // Level 1 (kl1.wad) replaces E1M1 of the shareware IWAD; warp straight into it.
+    var args = ["-iwad", "doom1.wad", "-window", "-nogui", "-nomusic", "-config", "default.cfg", "-file", "kl1.wad", "-dehlump", "-warp", "1", "1", "-skill", "3"];
 
     var Module = {
       noInitialRun: true,
       onRuntimeInitialized: function () { callMain(args); },
       preRun: function () {
         Module.FS.createPreloadedFile("", "doom1.wad", "doom1.wad", true, true);
+        Module.FS.createPreloadedFile("", "kl1.wad", "kl1.wad", true, true);
         Module.FS.createPreloadedFile("", "default.cfg", "default.cfg", true, true);
       },
       canvas: document.getElementById("canvas"),

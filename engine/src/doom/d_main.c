@@ -1464,7 +1464,8 @@ void D_DoomMain(void)
 
         for (i = numiwadlumps; i < numlumps; ++i) {
             if (!strncmp(lumpinfo[i]->name, "DEHACKED", 8)) {
-                DEH_LoadLump(i, false, false);
+                // KL-Doom: allow strings longer than vanilla's (level names, ending text)
+                DEH_LoadLump(i, true, false);
                 loaded++;
             }
         }
@@ -1487,9 +1488,8 @@ void D_DoomMain(void)
                             "e3m8", "e3m9", "dphoof", "bfgga0", "heada1", "cybra1", "spida1d1"};
         int i;
 
-        if (gamemode == shareware)
-            I_Error(DEH_String("\nYou cannot -file with the shareware "
-                               "version. Register!"));
+        // KL-Doom: custom levels are loaded on top of the shareware IWAD, so
+        // the "cannot -file with the shareware version" restriction is removed.
 
         // Check for fake IWAD with right name,
         // but w/o all the lumps of the registered version.
