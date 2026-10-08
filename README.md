@@ -6,7 +6,7 @@ Plays in the browser; the server only hosts static files.
 ## Status
 
 - [x] Step 1: original shareware Doom (E1M1) running in the browser from a WebAssembly build
-- [ ] Step 2: OpenStreetMap snapshot of KLCC
+- [x] Step 2: OpenStreetMap snapshot of KLCC (`data/osm/klcc.osm`, `scripts/fetch-osm.sh`)
 - [ ] Step 3: map generator -> `kl1.wad`
 - [ ] Step 4: landing page
 - [ ] Step 5: deploy (nginx/Caddy on an Ubuntu droplet)
@@ -36,4 +36,4 @@ Open http://localhost:8000/. Serve `.wasm` as `application/wasm` in production.
 
 ## Credits
 
-Map data (when added): (c) OpenStreetMap contributors, https://www.openstreetmap.org/copyright
+Map data: (c) OpenStreetMap contributors, https://www.openstreetmap.org/copyright
